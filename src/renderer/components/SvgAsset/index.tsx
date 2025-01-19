@@ -3,7 +3,9 @@ import { memo } from "react";
 export type SvgAssetIconNames =
   | "album"
   | "array-download-tray"
+  | "arrow-left-end-on-rectangle"
   | "cd"
+  | "chat-bubble-left-ellipsis"
   | "check"
   | "check-circle"
   | "chevron-double-down"
@@ -11,6 +13,7 @@ export type SvgAssetIconNames =
   | "chevron-down"
   | "chevron-left"
   | "chevron-right"
+  | "clock"
   | "code-bracket-square"
   | "cog-8-tooth"
   | "dashboard-speed"
@@ -19,24 +22,30 @@ export type SvgAssetIconNames =
   | "folder-open"
   | "font-size-larger"
   | "font-size-smaller"
+  | "hand-thumb-up"
   | "headphone"
   | "heart-outline"
   | "heart"
   | "identification"
+  | "language"
   | "list-bullet"
   | "lock-closed"
   | "lock-open"
   | "logo"
   | "lyric"
+  | "lyric-en"
   | "magnifying-glass"
   | "minus"
   | "motion-play"
   | "musical-note"
   | "pause"
+  | "pencil-square"
+  | "picture-in-picture-line"
   | "play"
   | "playlist"
   | "plus"
   | "plus-circle"
+  | "question-mark-circle"
   | "repeat-song-1"
   | "repeat-song"
   | "rolling-1s"
@@ -49,8 +58,10 @@ export type SvgAssetIconNames =
   | "sparkles"
   | "speaker-wave"
   | "speaker-x-mark"
+  | "square"
   | "trash"
   | "trophy"
+  | "t-shirt-line"
   | "user"
   | "lq"
   | "sd"
@@ -62,6 +73,7 @@ interface IProps {
   iconName: SvgAssetIconNames;
   size?: number;
   title?: string;
+  color?: string;
 }
 /**
  *
@@ -77,6 +89,7 @@ function SvgAsset(props: IProps) {
       style={{
         width: props.size,
         height: props.size,
+        color: props.color,
       }}
     ></Svg.default>
   );

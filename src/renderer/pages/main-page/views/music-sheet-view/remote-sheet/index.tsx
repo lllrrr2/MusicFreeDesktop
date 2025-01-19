@@ -2,22 +2,19 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import usePluginSheetMusicList from "./hooks/usePluginSheetMusicList";
 import MusicSheetlikeView from "@/renderer/components/MusicSheetlikeView";
-import { starredSheetsStore } from "@/renderer/core/music-sheet";
 import { isSameMedia } from "@/common/media-util";
-import {
-  starMusicSheet,
-  unstarMusicSheet,
-} from "@/renderer/core/music-sheet/internal/sheets-method";
+
+import MusicSheet from "@/renderer/core/music-sheet";
+import { useTranslation } from "react-i18next";
+import SvgAsset from "@/renderer/components/SvgAsset";
 
 export default function RemoteSheet() {
   const { platform, id } = useParams() ?? {};
 
   const [state, sheetItem, musicList, getSheetDetail] = usePluginSheetMusicList(
-    {
-      ...(history.state?.usr?.sheetItem ?? {}),
-      platform,
-      id,
-    } as IMusic.IMusicSheetItem
+    platform,
+    id,
+    history.state?.usr?.sheetItem
   );
   return (
     <MusicSheetlikeView
@@ -37,7 +34,8 @@ interface IProps {
 }
 function RemoteSheetOptions(props: IProps) {
   const { sheetItem } = props;
-  const starredMusicSheets = starredSheetsStore.useValue();
+  const starredMusicSheets = MusicSheet.frontend.useAllStarredSheets();
+  const { t } = useTranslation();
 
   const isStarred = starredMusicSheets.find((item) =>
     isSameMedia(sheetItem, item)
@@ -47,12 +45,19 @@ function RemoteSheetOptions(props: IProps) {
     <>
       <div
         role="button"
+        className="option-button"
         data-type="normalButton"
         onClick={() => {
-          isStarred ? unstarMusicSheet(sheetItem) : starMusicSheet(sheetItem);
+          isStarred
+            ? MusicSheet.frontend.unstarMusicSheet(sheetItem)
+            : MusicSheet.frontend.starMusicSheet(sheetItem);
         }}
       >
-        {isStarred ? "取消收藏" : "收藏歌单"}
+        <SvgAsset
+          iconName={isStarred ? "heart" : "heart-outline"}
+          color={isStarred ? "red" : undefined}
+        ></SvgAsset>
+        <span>{t("music_sheet_like_view.star")}</span>
       </div>
     </>
   );

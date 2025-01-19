@@ -1,12 +1,19 @@
 import SvgAsset from "@/renderer/components/SvgAsset";
 import "./index.scss";
-import trackPlayer from "@/renderer/core/track-player";
+import trackPlayer from "@renderer/core/track-player";
+import { useTranslation } from "react-i18next";
+import { PlayerState } from "@/common/constant";
+import {usePlayerState} from "@renderer/core/track-player/hooks";
 
 export default function Controller() {
-  const playerState = trackPlayer.usePlayerState();
+  const playerState = usePlayerState();
+
+  const {t} = useTranslation();
+
+
   return (
     <div className="music-controller">
-      <div className="skip controller-btn" title="上一首" onClick={() => {
+      <div className="skip controller-btn" title={t("music_bar.previous_music")} onClick={() => {
           trackPlayer.skipToPrev();
 
       }}>
@@ -15,24 +22,24 @@ export default function Controller() {
       <div
         className="play-or-pause controller-btn primary-btn"
         onClick={() => {
-          if(playerState === trackPlayer.PlayerState.Playing) {
+          if(playerState === PlayerState.Playing) {
             trackPlayer.pause();
           } else {
-            trackPlayer.resumePlay();
+            trackPlayer.resume();
           }
         }}
       >
         <SvgAsset
           iconName={
-            playerState !== trackPlayer.PlayerState.Playing ? "play" : "pause"
+            playerState !== PlayerState.Playing ? "play" : "pause"
           }
         ></SvgAsset>
       </div>
       <div
         className="skip controller-btn"
-        title="下一首"
+        title={t("music_bar.next_music")}
         onClick={() => {
-      
+
           trackPlayer.skipToNext();
         }}
       >

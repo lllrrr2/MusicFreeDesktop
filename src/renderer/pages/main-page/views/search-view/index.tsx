@@ -1,8 +1,3 @@
-import {
-  getSearchablePlugins,
-  getSupportedPlugin,
-  useSupportedPlugin,
-} from "@/renderer/core/plugin-delegate";
 import { useEffect } from "react";
 import { useMatch, useNavigate } from "react-router-dom";
 import "./index.scss";
@@ -13,12 +8,13 @@ import { useTranslation } from "react-i18next";
 import SearchResult from "./components/SearchResult";
 import useSearch from "./hooks/useSearch";
 import { currentMediaTypeStore, resetStore } from "./store/search-result";
+import PluginManager, {useSortedSupportedPlugin} from "@shared/plugin-manager/renderer";
 
 export default function SearchView() {
   const match = useMatch("/main/search/:query");
-  const query = match?.params?.query;
+  const query = decodeURIComponent(match?.params?.query ?? "");
 
-  const plugins = useSupportedPlugin("search");
+  const plugins = useSortedSupportedPlugin("search");
 
   const { t } = useTranslation();
   const search = useSearch();
@@ -39,9 +35,10 @@ export default function SearchView() {
   }, []);
 
   return (
-    <div className="search-view-container">
+    <div id="page-container" className="page-container search-view-container">
       <div className="search-header">
-        <span className="highlight">「{query}」</span>的搜索结果
+        <span className="highlight">「{decodeURIComponent(query)}」</span>
+        {t("search_result_page.search_result_title")}
       </div>
       {plugins.length ? (
         <Tab.Group
@@ -60,7 +57,7 @@ export default function SearchView() {
           <Tab.List className="tab-list-container">
             {supportedMediaType.map((type) => (
               <Tab key={type} as="div" className="tab-list-item">
-                {t(type)}
+                {t(`media.media_type_${type}`)}
               </Tab>
             ))}
           </Tab.List>
@@ -69,7 +66,7 @@ export default function SearchView() {
               <Tab.Panel className="tab-panel-container" key={type}>
                 <SearchResult
                   type={type}
-                  plugins={getSearchablePlugins(type)}
+                  plugins={PluginManager.getSortedSearchablePlugins(type)}
                   query={query}
                 ></SearchResult>
               </Tab.Panel>
@@ -77,7 +74,7 @@ export default function SearchView() {
           </Tab.Panels>
         </Tab.Group>
       ) : (
-        <NoPlugin supportMethod="搜索"></NoPlugin>
+        <NoPlugin supportMethod={t("plugin.method_search")}></NoPlugin>
       )}
     </div>
   );

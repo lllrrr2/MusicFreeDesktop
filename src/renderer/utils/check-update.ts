@@ -1,15 +1,15 @@
-import { ipcRendererInvoke } from "@/common/ipc-util/renderer";
 import { compare } from "compare-versions";
 import { showModal } from "../components/Modal";
-import { getUserPerference } from "./user-perference";
+import { getUserPreference } from "./user-perference";
+import {appUtil} from "@shared/utils/renderer";
 
-export default async function checkUpdate(ignorePref?: boolean) {
+export default async function checkUpdate(forceCheck?: boolean) {
   /** checkupdate */
-  const updateInfo = await ipcRendererInvoke("check-update");
+  const updateInfo = await appUtil.checkUpdate();
   if (updateInfo.update) {
-    const skipVersion = getUserPerference("skipVersion");
+    const skipVersion = getUserPreference("skipVersion");
     if (
-      !ignorePref &&
+      !forceCheck &&
       skipVersion &&
       compare(updateInfo.version, skipVersion, "<=")
     ) {

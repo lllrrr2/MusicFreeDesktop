@@ -6,20 +6,21 @@ import {
 } from "@/common/media-util";
 import Store from "@/common/store";
 import {
-  getUserPerferenceIDB,
-  setUserPerferenceIDB,
+  getUserPreferenceIDB,
+  setUserPreferenceIDB,
 } from "@/renderer/utils/user-perference";
 import musicSheetDB from "../db/music-sheet-db";
 import { internalDataKey, musicRefSymbol } from "@/common/constant";
 import { useEffect, useState } from "react";
-import Evt from "../events";
+import { DownloadEvts, ee } from "./ee";
+import {fsUtil} from "@shared/utils/renderer";
 
 const downloadedMusicListStore = new Store<IMusic.IMusicItem[]>([]);
 const downloadedSet = new Set<string>();
 
 // 在初始化歌单时一起初始化
 export async function setupDownloadedMusicList() {
-  const downloadedPKs = (await getUserPerferenceIDB("downloadedList")) ?? [];
+  const downloadedPKs = (await getUserPreferenceIDB("downloadedList")) ?? [];
   downloadedMusicListStore.setValue(await getDownloadedDetails(downloadedPKs));
   downloadedPKs.forEach((it) => {
     downloadedSet.add(getMediaPrimaryKey(it));
@@ -83,8 +84,8 @@ export async function addDownloadedMusicToList(
       allMusic.forEach((it) => {
         downloadedSet.add(getMediaPrimaryKey(it));
       });
-      Evt.emit("MUSIC_DOWNLOADED", allMusic);
-      setUserPerferenceIDB(
+      ee.emit(DownloadEvts.Downloaded, allMusic);
+      setUserPreferenceIDB(
         "downloadedList",
         downloadedMusicListStore.getValue().map(primaryKeyMap)
       );
@@ -99,8 +100,10 @@ export async function addDownloadedMusicToList(
 export async function removeDownloadedMusic(
   musicItems: IMusic.IMusicItem | IMusic.IMusicItem[],
   removeFile = false
-) {
+): Promise<ICommon.ICommonReturnType> {
   const _musicItems = Array.isArray(musicItems) ? musicItems : [musicItems];
+
+  let message: string | null = null;
 
   try {
     // 1. 获取全部详细信息
@@ -117,12 +120,18 @@ export async function removeDownloadedMusic(
     let removeResults: boolean[] = [];
     if (removeFile) {
       removeResults = await Promise.all(
-        toBeRemovedMusicDetail.map((it) =>
-          window.rimraf(
-            getInternalData<IMusic.IMusicItemInternalData>(it, "downloadData")
-              ?.path
-          )
-        )
+        toBeRemovedMusicDetail.map((it) => {
+          try {
+            return fsUtil.rimraf(
+              getInternalData<IMusic.IMusicItemInternalData>(it, "downloadData")
+                ?.path
+            );
+          } catch (e) {
+            // 删除失败
+            message = "部分歌曲删除失败 " + (e?.message ?? "");
+            return false;
+          }
+        })
       );
     }
     // 3. 修改数据库
@@ -163,18 +172,27 @@ export async function removeDownloadedMusic(
         )
       );
       // 触发事件
-      Evt.emit("MUSIC_REMOVE_DOWNLOADED", _musicItems);
+      ee.emit(DownloadEvts.RemoveDownload, _musicItems);
       _musicItems.forEach((it) => {
         downloadedSet.delete(getMediaPrimaryKey(it));
       });
-      setUserPerferenceIDB(
+      setUserPreferenceIDB(
         "downloadedList",
         downloadedMusicListStore.getValue()
       );
     });
   } catch (e) {
-    console.log(e);
-    throw e;
+    message = "删除失败 " + e?.message ?? "";
+  }
+  if (message) {
+    return [
+      false,
+      {
+        msg: message,
+      },
+    ];
+  } else {
+    return [true];
   }
 }
 
@@ -212,16 +230,16 @@ export function useDownloaded(musicItem: IMedia.IMediaBase) {
       }
     };
 
-    if(musicItem) {
+    if (musicItem) {
       setDownloaded(isDownloaded(musicItem));
     }
 
-    Evt.on("MUSIC_DOWNLOADED", dlCb);
-    Evt.on("MUSIC_REMOVE_DOWNLOADED", rmCb);
+    ee.on(DownloadEvts.Downloaded, dlCb);
+    ee.on(DownloadEvts.RemoveDownload, rmCb);
 
     return () => {
-      Evt.off("MUSIC_DOWNLOADED", dlCb);
-      Evt.off("MUSIC_REMOVE_DOWNLOADED", rmCb);
+      ee.off(DownloadEvts.Downloaded, dlCb);
+      ee.off(DownloadEvts.RemoveDownload, rmCb);
     };
   }, [musicItem]);
 

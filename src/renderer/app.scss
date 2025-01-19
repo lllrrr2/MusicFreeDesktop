@@ -8,8 +8,8 @@
 
   & .body-container {
     width: 100%;
-    height: calc(100vh - 54px - 64px);
-    flex: auto;
+    height: 0;
+    flex: 1;
     display: flex;
     position: relative;
   }
@@ -20,6 +20,19 @@
   margin-top: 1.2rem;
   flex-shrink: 0;
   column-gap: 2.5rem;
+  overflow-x: auto;
+  padding-bottom: 6px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 当鼠标悬浮时显示滚动条 */
+  &:hover {
+    &::-webkit-scrollbar {
+      display: block;
+    }
+  }
 
   & .tab-list-item {
     display: flex;
@@ -31,6 +44,8 @@
     outline: none;
     cursor: pointer;
     opacity: 0.7;
+    white-space: nowrap;
+    user-select: none;
 
     &:hover {
       opacity: 0.9;
@@ -74,7 +89,7 @@
   --listHoverColor: rgba(0, 0, 0, 0.05); // 列表悬浮颜色
   --listActiveColor: rgba(0, 0, 0, 0.1); // 列表选中颜色
   --textColor: #333333; // 主文本颜色
-  --maskColor: rgba(51, 51, 51, 0.2); // 遮罩层颜色
+  --maskColor: rgba(51, 51, 51, 0.5); // 遮罩层颜色
   /* --backdropColor: #fdfdfd; // 弹窗等地方的背景颜色，默认和背景色一致*/
   --shadowColor: rgba(0, 0, 0, 0.2);
   /** --shadow:  // 全部的shadow属性 */
@@ -91,8 +106,12 @@
   --animate-duration: 300ms !important;
   --scrollbar-width: 8px;
 
+  --appHeaderHeight: 54px;
+  --appMusicBarHeight: 64px;
+
   font-size: 13px;
   color: var(--textColor);
+
 }
 
 a {

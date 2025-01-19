@@ -14,21 +14,34 @@ declare namespace ICommon {
       version: string;
       changeLog: string[];
       download: string[];
-    }
+    };
   }
 
   interface IPoint {
     x: number;
-    y: number
+    y: number;
+  }
+
+  interface ISize {
+    width: number;
+    height: number;
   }
 
   interface IThemePack {
+    id?: string;
+    /** 主题 */
     name: string;
+    /** 加载之后的路径，内部属性 */
+    hash?: string;
     path: string;
+    /** 缩略图 */
+    thumb?: string;
     /** 预览图 */
     preview: string;
     /** 主题更新链接 */
     srcUrl?: string;
+    /** 主题作者 */
+    author?: string;
     /** 版本号 */
     version?: string;
     description?: string;
@@ -44,5 +57,22 @@ declare namespace ICommon {
     /** 总大小 */
     totalSize?: number;
   }
-  
+
+  type ICommonReturnType = [
+    boolean,
+    {
+      msg?: string;
+      [k: string]: any;
+    }?
+  ];
+
+  interface ICommand {
+    SetPlayerState: PlayerState;
+    SkipToPrevious: void;
+    SkipToNext: void;
+    SetRepeatMode: RepeatMode;
+    PlayMusic: IMusic.IMusicItem;
+  }
+
+  type ICommandKey = keyof ICommand;
 }

@@ -1,26 +1,25 @@
 import SvgAsset from "@/renderer/components/SvgAsset";
-import Evt from "@/renderer/core/events";
 import "./index.scss";
 import SwitchCase from "@/renderer/components/SwitchCase";
-import trackPlayer from "@/renderer/core/track-player";
-import { RepeatMode } from "@/renderer/core/track-player/enum";
-import { useEffect, useRef, useState } from "react";
+import trackPlayer from "@renderer/core/track-player";
+import {useRef, useState} from "react";
 import Condition from "@/renderer/components/Condition";
 import Slider from "rc-slider";
-import { showContextMenu } from "@/renderer/components/ContextMenu";
-import { toast } from "react-toastify";
-import { showModal } from "@/renderer/components/Modal";
-import rendererAppConfig from "@/common/app-config/renderer";
-import { ipcRendererInvoke, ipcRendererSend } from "@/common/ipc-util/renderer";
-import {
-  sendMessageToLyricWindow,
-  setMainWindowMessagePort,
-} from "@/renderer/utils/lrc-window-message-channel";
+import {showModal} from "@/renderer/components/Modal";
 import classNames from "@/renderer/utils/classnames";
-import { useLyric } from "@/renderer/core/track-player/player";
+import {getCurrentPanel, hidePanel, showPanel,} from "@/renderer/components/Panel";
+import {useTranslation} from "react-i18next";
+import AppConfig from "@shared/app-config/renderer";
+import {isCN} from "@/shared/i18n/renderer";
+import useAppConfig from "@/hooks/useAppConfig";
+import {RepeatMode} from "@/common/constant";
+import {useQuality, useRepeatMode, useSpeed, useVolume} from "@renderer/core/track-player/hooks";
+import {appWindowUtil} from "@shared/utils/renderer";
+import {musicDetailShownStore} from "@renderer/components/MusicDetail/store";
 
 export default function Extra() {
-  const repeatMode = trackPlayer.useRepeatMode();
+  const repeatMode = useRepeatMode();
+  const { t } = useTranslation();
 
   return (
     <div className="music-extra">
@@ -35,10 +34,10 @@ export default function Extra() {
         }}
         title={
           repeatMode === RepeatMode.Loop
-            ? "单曲循环"
+            ? t("media.music_repeat_mode_loop")
             : repeatMode === RepeatMode.Queue
-            ? "列表循环"
-            : "随机播放"
+            ? t("media.music_repeat_mode_queue")
+            : t("media.music_repeat_mode_shuffle")
         }
       >
         <SwitchCase.Switch switch={repeatMode}>
@@ -55,10 +54,16 @@ export default function Extra() {
       </div>
       <div
         className="extra-btn"
-        title="播放列表"
+        title={t("media.playlist")}
         role="button"
         onClick={() => {
-          Evt.emit("SWITCH_PLAY_LIST");
+          if (getCurrentPanel()?.type === "PlayList") {
+            hidePanel();
+          } else {
+            showPanel("PlayList", {
+              coverHeader: musicDetailShownStore.getValue()
+            });
+          }
         }}
       >
         <SvgAsset iconName="playlist"></SvgAsset>
@@ -68,9 +73,10 @@ export default function Extra() {
 }
 
 function VolumeBtn() {
-  const volume = trackPlayer.useVolume();
+  const volume = useVolume();
   const tmpVolumeRef = useRef<number | null>(null);
   const [showVolumeBubble, setShowVolumeBubble] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div
@@ -82,8 +88,8 @@ function VolumeBtn() {
       onMouseOut={() => {
         setShowVolumeBubble(false);
       }}
-      onClick={() => {
-        if (tmpVolumeRef === null) {
+      onClick={(e) => {
+        if (tmpVolumeRef.current === null) {
           tmpVolumeRef.current = 0;
         }
         tmpVolumeRef.current =
@@ -113,17 +119,19 @@ function VolumeBtn() {
                 trackPlayer.setVolume(val as number);
               }}
               value={volume}
-              trackStyle={{
-                background: "var(--primaryColor)",
-              }}
-              handleStyle={{
-                height: 12,
-                width: 12,
-                marginLeft: -4,
-                borderColor: "var(--primaryColor)",
-              }}
-              railStyle={{
-                background: "#d8d8d8",
+              styles={{
+                track: {
+                  background: "var(--primaryColor)",
+                },
+                handle: {
+                  height: 12,
+                  width: 12,
+                  marginLeft: -4,
+                  borderColor: "var(--primaryColor)",
+                },
+                rail: {
+                  background: "#d8d8d8",
+                },
               }}
             ></Slider>
           </div>
@@ -131,7 +139,7 @@ function VolumeBtn() {
         </div>
       </Condition>
       <SvgAsset
-        title={volume === 0 ? "恢复音量" : "静音"}
+        title={volume === 0 ? t("music_bar.unmute") : t("music_bar.mute")}
         iconName={volume === 0 ? "speaker-x-mark" : "speaker-wave"}
       ></SvgAsset>
     </div>
@@ -139,9 +147,10 @@ function VolumeBtn() {
 }
 
 function SpeedBtn() {
-  const speed = trackPlayer.useSpeed();
+  const speed = useSpeed();
   const [showSpeedBubble, setShowSpeedBubble] = useState(false);
   const tmpSpeedRef = useRef<number | null>(null);
+  const { t } = useTranslation();
 
   return (
     <div
@@ -196,49 +205,52 @@ function SpeedBtn() {
           <div className="volume-slider-tag">{speed.toFixed(2)}x</div>
         </div>
       </Condition>
-      <SvgAsset title={"倍速播放"} iconName={"dashboard-speed"}></SvgAsset>
+      <SvgAsset
+        title={t("music_bar.playback_speed")}
+        iconName={"dashboard-speed"}
+      ></SvgAsset>
     </div>
   );
 }
 
 function QualityBtn() {
-  const quality = trackPlayer.useQuality();
+  const quality = useQuality();
+  const { t } = useTranslation();
 
   return (
     <div
       className="extra-btn"
       role="button"
-      onClick={(e) => {
+      onClick={() => {
         showModal("SelectOne", {
-          title: "切换音质",
+          title: t("music_bar.choose_music_quality"),
           defaultValue: quality,
           defaultExtra: true,
-          extra: "仅设置当前歌曲",
+          extra: t("music_bar.only_set_for_current_music"),
           choices: [
             {
               value: "low",
-              label: "低音质",
+              label: t("media.music_quality_low"),
             },
             {
               value: "standard",
-              label: "标准音质",
+              label: t("media.music_quality_standard"),
             },
             {
               value: "high",
-              label: "高音质",
+              label: t("media.music_quality_high"),
             },
             {
               value: "super",
-              label: "超高音质",
+              label: t("media.music_quality_super"),
             },
           ],
           onOk(value, extra) {
             trackPlayer.setQuality(value as IMusic.IQualityKey);
             if (!extra) {
-              rendererAppConfig.setAppConfigPath(
-                "playMusic.defaultQuality",
-                value
-              );
+              AppConfig.setConfig({
+                "playMusic.defaultQuality": value
+              });
             }
           },
         });
@@ -246,16 +258,25 @@ function QualityBtn() {
     >
       <SwitchCase.Switch switch={quality}>
         <SwitchCase.Case case={"low"}>
-          <SvgAsset title={"低音质"} iconName={"lq"}></SvgAsset>
+          <SvgAsset
+            title={t("media.music_quality_low")}
+            iconName={"lq"}
+          ></SvgAsset>
         </SwitchCase.Case>
         <SwitchCase.Case case={"standard"}>
-          <SvgAsset title={"标准音质"} iconName={"sd"}></SvgAsset>
+          <SvgAsset
+            title={t("media.music_quality_standard")}
+            iconName={"sd"}
+          ></SvgAsset>
         </SwitchCase.Case>
         <SwitchCase.Case case={"high"}>
-          <SvgAsset title={"高音质"} iconName={"hq"}></SvgAsset>
+          <SvgAsset
+            title={t("media.music_quality_high")}
+            iconName={"hq"}
+          ></SvgAsset>
         </SwitchCase.Case>
         <SwitchCase.Case case={"super"}>
-          <SvgAsset title={"超高音质"} iconName={"sq"}></SvgAsset>
+          <SvgAsset title={t("music_quality_super")} iconName={"sq"}></SvgAsset>
         </SwitchCase.Case>
       </SwitchCase.Switch>
     </div>
@@ -263,32 +284,8 @@ function QualityBtn() {
 }
 
 function LyricBtn() {
-  const rendererConfig = rendererAppConfig.useAppConfig();
-  const enableDesktopLyric = rendererConfig?.lyric?.enableDesktopLyric ?? false;
-  const lyric = useLyric();
-
-  useEffect(() => {
-    // 同步歌词 这样写貌似不好 应该用回调
-    // TODO: 挪到bootstrap中
-    if (enableDesktopLyric) {
-      // 同步歌词
-      if (lyric?.currentLrc) {
-        const currentLrc = lyric?.currentLrc;
-        // 同步两句歌词
-        ipcRendererSend("send-to-lyric-window", {
-          timeStamp: Date.now(),
-          lrc: currentLrc
-            ? [currentLrc.lrc, lyric.parser.getLyric()[currentLrc.index + 1]]
-            : [],
-        });
-      } else {
-        ipcRendererSend("send-to-lyric-window", {
-          timeStamp: Date.now(),
-          lrc: [],
-        });
-      }
-    }
-  }, [lyric, enableDesktopLyric]);
+  const enableDesktopLyric = useAppConfig("lyric.enableDesktopLyric");
+  const { t } = useTranslation();
 
   return (
     <div
@@ -298,10 +295,13 @@ function LyricBtn() {
       })}
       role="button"
       onClick={async () => {
-        ipcRendererInvoke("set-lyric-window", !enableDesktopLyric);
+        appWindowUtil.setLyricWindow(!enableDesktopLyric);
       }}
     >
-      <SvgAsset iconName="lyric"></SvgAsset>
+      <SvgAsset
+        iconName={isCN() ? "lyric" : "lyric-en"}
+        title={t("music_bar.desktop_lyric")}
+      ></SvgAsset>
     </div>
   );
 }

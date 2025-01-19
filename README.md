@@ -1,5 +1,14 @@
 # MusicFree 桌面版
 
+## 项目使用约定：
+本项目基于 AGPL 3.0 协议开源，使用此项目时请遵守开源协议。  
+除此外，希望你在使用代码时已经了解以下额外说明：
+
+1. 打包、二次分发 **请保留代码出处**：https://github.com/maotoumao/MusicFree
+2. 请不要用于商业用途，合法合规使用代码；
+3. 如果开源协议变更，将在此 Github 仓库更新，不另行通知。
+---
+
 ## 简介
 
 一个插件化、定制化、无广告的免费音乐播放器。
@@ -7,9 +16,10 @@
 
 <img src="./src/assets/imgs/wechat_channel1.png" height="144px" title="微信公众号" style="display:inherit;"/>
 
+
 ### 下载地址
 
-[蓝奏云下载地址](https://wwzb.lanzoue.com/b042da1xe)
+[飞书云文档](https://r0rvr854dd1.feishu.cn/drive/folder/IrVEfD67KlWZGkdqwjecLHFNnBb?from=from_copylink)
 
 ## 特性
 
@@ -19,7 +29,7 @@
 
 - 定制化：本软件可以通过主题包定义软件外观及背景，详见下方主题包一节。
 
-- 无广告：基于 GPL3.0 协议开源，将会保持免费。
+- 无广告：基于 AGPL3.0 协议开源，将会保持免费。
 
 - 隐私：软件所有数据存储在本地，本软件不会上传你的个人信息。
 
@@ -27,7 +37,7 @@
 
 插件协议和安卓版完全相同。
 
-[示例插件仓库](https://github.com/maotoumao/MusicFreePlugins)，你可以根据[插件开发文档](http://musicfree.upup.fun/docs/tutorial-plugin/intro/) 开发适配于任意音源的插件。
+[示例插件仓库](https://github.com/maotoumao/MusicFreePlugins)，你可以根据[插件开发文档](https://musicfree.catcat.work/plugin/introduction.html) 开发适配于任意音源的插件。
 
 ## 主题包
 
@@ -77,7 +87,7 @@ config.json 是一个配置文件。
     "preview": "#000000", // 预览图，支持颜色或图片；
     "description": "描述文本",
     "iframes": {
-        "app": "http://musicfree.upup.fun", // 整个软件的背景
+        "app": "http://musicfree.catcat.work", // 整个软件的背景
         "header": "", // 头部区域的背景
         "body": "", // 侧边栏+主页面区域的背景
         "side-bar": "", // 侧边栏区域的背景

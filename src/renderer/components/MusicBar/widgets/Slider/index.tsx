@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import "./index.scss";
-import trackPlayer from "@/renderer/core/track-player";
+import trackPlayer from "@renderer/core/track-player";
+import {useProgress} from "@renderer/core/track-player/hooks";
 
 export default function Slider() {
   const [seekPercent, _setSeekPercent] = useState<number | null>(null);
   const seekPercentRef = useRef<number | null>(null);
-  const { currentTime, duration } = trackPlayer.useProgress();
+  const { currentTime, duration } = useProgress();
   const isPressedRef = useRef(false);
 
   function setSeekPercent(value: number | null) {
@@ -22,7 +23,7 @@ export default function Slider() {
     const onMouseUp = (e: MouseEvent) => {
       if (isPressedRef.current) {
         isPressedRef.current = false;
-        const realProgress = trackPlayer.getProgress();
+        const realProgress = trackPlayer.progress;
         trackPlayer.seekTo(realProgress.duration * seekPercentRef.current);
         setSeekPercent(null);
       }
@@ -56,6 +57,8 @@ export default function Slider() {
             seekPercent !== null
               ? seekPercent * 100
               : duration === 0
+              ? 0
+              : !isFinite(duration) || isNaN(duration)
               ? 0
               : (currentTime / duration) * 100
           }%)`,

@@ -1,10 +1,11 @@
-import MusicSheet from "@/renderer/core/music-sheet";
+import MusicSheet, { defaultSheet } from "@/renderer/core/music-sheet";
 import Base from "../Base";
 import "./index.scss";
 import { setFallbackAlbum } from "@/renderer/utils/img-on-error";
 import albumImg from "@/assets/imgs/album-cover.jpg";
 import addImg from "@/assets/imgs/add.png";
 import { hideModal, showModal } from "../..";
+import { Trans, useTranslation } from "react-i18next";
 
 interface IAddMusicToSheetProps {
   musicItems: IMusic.IMusicItem | IMusic.IMusicItem[];
@@ -12,16 +13,24 @@ interface IAddMusicToSheetProps {
 
 export default function AddMusicToSheet(props: IAddMusicToSheetProps) {
   const { musicItems } = props;
+  const { t } = useTranslation();
 
-  const allSheets = MusicSheet.useAllSheets();
+  const allSheets = MusicSheet.frontend.useAllSheets();
   return (
     <Base withBlur={false}>
       <div className="modal--add-music-to-sheet-container shadow backdrop-color">
         <Base.Header>
           <span>
-            添加到歌单{" "}
+            {t("modal.add_to_my_sheets")}{" "}
             <span className="music-length">
-              (共{Array.isArray(musicItems) ? musicItems.length : 1}首)
+              (
+              <Trans
+                i18nKey={"modal.total_music_num"}
+                values={{
+                  number: Array.isArray(musicItems) ? musicItems.length : 1,
+                }}
+              ></Trans>
+              )
             </span>
           </span>
         </Base.Header>
@@ -36,7 +45,7 @@ export default function AddMusicToSheet(props: IAddMusicToSheetProps) {
             }}
           >
             <img src={addImg}></img>
-            <span>新建歌单</span>
+            <span>{t("modal.create_local_sheet")}</span>
           </div>
           {allSheets.map((sheet) => (
             <div
@@ -44,7 +53,7 @@ export default function AddMusicToSheet(props: IAddMusicToSheetProps) {
               key={sheet.id}
               role="button"
               onClick={() => {
-                MusicSheet.addMusicToSheet(musicItems, sheet.id);
+                MusicSheet.frontend.addMusicToSheet(musicItems, sheet.id);
                 hideModal();
               }}
             >
@@ -52,7 +61,11 @@ export default function AddMusicToSheet(props: IAddMusicToSheetProps) {
                 src={sheet.artwork ?? albumImg}
                 onError={setFallbackAlbum}
               ></img>
-              <span>{sheet.title}</span>
+              <span>
+                {sheet.id === defaultSheet.id
+                  ? t("media.default_favorite_sheet_name")
+                  : sheet.title}
+              </span>
             </div>
           ))}
         </div>

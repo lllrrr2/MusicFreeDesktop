@@ -1,225 +1,242 @@
-import { IAppConfig } from "@/common/app-config/type";
 import "./index.scss";
 import CheckBoxSettingItem from "../../components/CheckBoxSettingItem";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 
 import hotkeys from "hotkeys-js";
-import rendererAppConfig from "@/common/app-config/renderer";
-import { bindShortCut } from "@/renderer/core/shortcut";
-import { ipcRendererSend } from "@/common/ipc-util/renderer";
-import raf2 from "@/renderer/utils/raf2";
-interface IProps {
-  data: IAppConfig["shortCut"];
-}
+import {useTranslation} from "react-i18next";
+import useAppConfig from "@/hooks/useAppConfig";
+import {IAppConfig} from "@/types/app-config";
+import shortCut from "@shared/short-cut/renderer";
+import {shortCutKeys} from "@/common/constant";
+import SvgAsset from "@renderer/components/SvgAsset";
 
-let recordShortCutKey: string[] = [];
-let isAllModifierKey = false;
 
-export default function ShortCut(props: IProps) {
-  const { data = {} as IAppConfig["shortCut"] } = props;
-  useEffect(() => {
-    hotkeys(
-      "*",
-      {
-        capture: true,
-      },
-      (evt, detail) => {
-        const target = evt.target as HTMLElement;
-        if (
-          target.tagName === "INPUT" &&
-          target.dataset["capture"] === "true"
-        ) {
-          const pressedKeys = hotkeys.getPressedKeyString();
-          const _recordShortCutKey = [];
-          isAllModifierKey = false;
-          if (hotkeys.ctrl) {
-            _recordShortCutKey.push("Ctrl");
-            isAllModifierKey = true;
-          }
-          if (hotkeys.shift) {
-            _recordShortCutKey.push("Shift");
-            isAllModifierKey = true;
-          }
-          if (hotkeys.alt) {
-            _recordShortCutKey.push("Alt");
-            isAllModifierKey = true;
-          }
-          // 跟一个普通键
-          for (let i = pressedKeys.length - 1; i >= 0; --i) {
-            if (!hotkeys.modifier[pressedKeys[i]]) {
-              _recordShortCutKey.push(
-                pressedKeys[i].replace(/^(.)/, (_, $1: string) =>
-                  $1.toUpperCase()
-                )
-              );
-              isAllModifierKey = false;
-              break;
-            }
-          }
-          recordShortCutKey = _recordShortCutKey;
-        }
-      }
-    );
-    return () => {
-      hotkeys.unbind("*");
-    };
-  }, []);
+export default function ShortCut() {
+    const {t} = useTranslation();
 
-  return (
-    <div className="setting-view--short-cut-container">
-      <CheckBoxSettingItem
-        keyPath="shortCut.enableLocal"
-        checked={data.enableLocal}
-        label="启用软件内快捷键"
-      ></CheckBoxSettingItem>
-      <CheckBoxSettingItem
-        keyPath="shortCut.enableGlobal"
-        checked={data.enableGlobal}
-        onCheckChanged={(val) => {
-          ipcRendererSend("enable-global-short-cut", val);
-        }}
-        label="启用全局快捷键"
-      ></CheckBoxSettingItem>
-      <ShortCutTable
-        shortCuts={data.shortcuts ?? {}}
-        enableLocal={data.enableLocal ?? true}
-        enableGlobal={data.enableGlobal ?? false}
-      ></ShortCutTable>
-    </div>
-  );
-}
-
-type IShortCutKeys = keyof IAppConfig["shortCut"]["shortcuts"];
-const translations: Record<IShortCutKeys, string> = {
-  "play/pause": "播放/暂停",
-  "skip-next": "播放下一首",
-  "skip-previous": "播放上一首",
-  "volume-up": "增加音量",
-  "volume-down": "减少音量",
-  "toggle-desktop-lyric": "打开/关闭桌面歌词",
-  "like/dislike": "喜欢/不喜欢当前歌曲",
-};
-
-const shortCutKeys = Object.keys(translations) as IShortCutKeys[];
-
-interface IShortCutTableProps {
-  shortCuts: Partial<IAppConfig["shortCut"]["shortcuts"]>;
-  enableLocal: boolean;
-  enableGlobal: boolean;
-}
-function ShortCutTable(props: IShortCutTableProps) {
-  const { shortCuts, enableGlobal, enableLocal } = props;
-
-  return (
-    <div className="setting-view--short-cut-table-container">
-      <div className="setting-view--short-cut-table-row">
-        <div className="short-cut-cell">功能</div>
-        <div className="short-cut-cell">软件快捷键</div>
-        <div className="short-cut-cell">全局快捷键</div>
-      </div>
-      {shortCutKeys.map((it) => (
-        <div className="setting-view--short-cut-table-row" key={it}>
-          <div className="short-cut-cell">
-            {translations[it as IShortCutKeys]}
-          </div>
-          <div className="short-cut-cell">
-            <ShortCutItem
-              enabled={enableLocal}
-              value={shortCuts[it]?.local}
-              onChange={(val) => {
-                bindShortCut(it as IShortCutKeys, val);
-                rendererAppConfig.setAppConfigPath(
-                  `shortCut.shortcuts.${it}.local`,
-                  val
-                );
-              }}
-            ></ShortCutItem>
-          </div>
-          <div className="short-cut-cell">
-            <ShortCutItem
-              enabled={enableGlobal}
-              value={shortCuts[it]?.global}
-              onChange={(val) => {
-                console.log(it, val);
-                bindShortCut(it as IShortCutKeys, val, true);
-              }}
-            ></ShortCutItem>
-          </div>
+    return (
+        <div className="setting-view--short-cut-container">
+            <CheckBoxSettingItem
+                keyPath="shortCut.enableLocal"
+                label={t("settings.short_cut.enable_local")}
+            ></CheckBoxSettingItem>
+            <CheckBoxSettingItem
+                keyPath="shortCut.enableGlobal"
+                label={t("settings.short_cut.enable_global")}
+            ></CheckBoxSettingItem>
+            <ShortCutTable></ShortCutTable>
         </div>
-      ))}
-    </div>
-  );
+    );
+}
+
+type IShortCutKeys = keyof IAppConfig["shortCut.shortcuts"];
+
+
+function ShortCutTable() {
+    const {t} = useTranslation();
+
+    const enableLocalShortCut = useAppConfig("shortCut.enableLocal");
+    const enableGlobalShortCut = useAppConfig("shortCut.enableGlobal");
+    const shortCuts = useAppConfig("shortCut.shortcuts");
+
+
+    return (
+        <div className="setting-view--short-cut-table-container">
+            <div className="setting-view--short-cut-table-row">
+                <div className="short-cut-cell">{t("settings.short_cut.ability")}</div>
+                <div className="short-cut-cell">
+                    {t("settings.short_cut.enable_local")}
+                </div>
+                <div className="short-cut-cell">
+                    {t("settings.short_cut.enable_global")}
+                </div>
+            </div>
+            {shortCutKeys.map((it: string) => (
+                <div className="setting-view--short-cut-table-row" key={it}>
+                    <div className="short-cut-cell">{t(`settings.short_cut.${it}`)}</div>
+                    <div className="short-cut-cell">
+                        <ShortCutItem
+                            enabled={enableLocalShortCut}
+                            value={shortCuts?.[it]?.local}
+                            onChange={(val) => {
+                                shortCut.registerLocalShortCut(it as IShortCutKeys, val);
+                            }}
+                            showClearButton
+                            onClear={() => {
+                                shortCut.unregisterLocalShortCut(it as IShortCutKeys);
+                            }}
+                        ></ShortCutItem>
+                    </div>
+                    <div className="short-cut-cell">
+                        <ShortCutItem
+                            enabled={enableGlobalShortCut}
+                            value={shortCuts?.[it]?.global}
+                            onChange={(val) => {
+                                shortCut.registerGlobalShortCut(it as IShortCutKeys, val);
+                            }}
+                            showClearButton
+                            onClear={() => {
+                                shortCut.unregisterGlobalShortCut(it as IShortCutKeys);
+                            }}
+                        ></ShortCutItem>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 interface IShortCutItemProps {
-  enabled?: boolean;
-  value?: string[];
-  onChange?: (sc?: string[]) => void;
+    enabled?: boolean;
+    isGlobal?: boolean;
+    value?: string[];
+    onChange?: (sc?: string[]) => void;
+    showClearButton?: boolean;
+    onClear?: () => void;
 }
 
 function formatValue(val: string[]) {
-  return val.join(" + ");
+    return val.join(" + ");
+}
+
+function keyCodeMap(code: string) {
+    switch (code) {
+        case "arrowup":
+            return "Up";
+        case "arrowdown":
+            return "Down";
+        case "arrowleft":
+            return "Left";
+        case "arrowright":
+            return "Right";
+        default:
+            return code;
+    }
 }
 
 function ShortCutItem(props: IShortCutItemProps) {
-  const { value, onChange, enabled } = props;
-  const [realValue, setRealValue] = useState(formatValue(value ?? []));
-  const isRecordingRef = useRef(false);
-  const inputRef = useRef<HTMLInputElement>();
-  // todo 写的很奇怪
-  const resultRef = useRef<string[]>([]);
-  const isAllModifierKeyRef = useRef(false);
+    const {value, onChange, enabled, isGlobal, showClearButton, onClear} = props;
+    const [tmpValue, setTmpValue] = useState<string[] | null>();
+    const realValue = formatValue(tmpValue ?? value ?? []);
+    const isRecordingRef = useRef(false);
+    const scopeRef = useRef(Math.random().toString().slice(2));
+    const recordedKeysRef = useRef(new Set<string>());
+    const {t} = useTranslation();
 
-  const keyupHandler = () =>
-    raf2(() => {
-      const isAllModifierKey = isAllModifierKeyRef.current;
-      const recordShortCutKey = resultRef.current;
-      if (isRecordingRef.current) {
-        if (isAllModifierKey || !recordShortCutKey.length) {
-          setRealValue(formatValue(value ?? []));
-        } else if (
-          recordShortCutKey.includes("Backspace")
-        ) {
-          setRealValue("");
-          onChange?.([]);
-        } else {
-          setRealValue(formatValue(recordShortCutKey));
-          onChange?.(recordShortCutKey);
-        }
-      }
-      isAllModifierKeyRef.current = false;
-      resultRef.current = [];
+    useEffect(() => {
+        hotkeys(
+            "*",
+            {
+                scope: scopeRef.current,
+                keyup: true,
+            },
+            (evt) => {
+                const type = evt.type;
+                let key = evt.key.toLowerCase();
+                if (evt.code === "Space") {
+                    key = "Space";
+                }
+                if (type === "keydown") {
+                    isRecordingRef.current = true;
+                    if (key === "meta") {
+                        setTmpValue(null);
+                        isRecordingRef.current = false;
+                        recordedKeysRef.current.clear();
+                    } else {
+                        if (!recordedKeysRef.current.has(key)) {
+                            recordedKeysRef.current.add(key);
+                            setTmpValue(
+                                [...recordedKeysRef.current].map((it) =>
+                                    it.replace(/^(.)/, (_, $1: string) => $1.toUpperCase())
+                                )
+                            );
+                        }
+                    }
+                } else if (type === "keyup" && isRecordingRef.current) {
+                    isRecordingRef.current = false;
+                    // 开始结算
+                    const recordedSet = recordedKeysRef.current;
+                    const _recordShortCutKey = [];
 
-      isRecordingRef.current = false;
-    });
+                    let statusCode = 0;
+                    if (recordedSet.has("ctrl") || recordedSet.has("control")) {
+                        _recordShortCutKey.push("Ctrl");
+                        recordedSet.delete("ctrl");
+                        recordedSet.delete("control");
+                        statusCode |= 1;
+                    }
+                    if (recordedSet.has("command")) {
+                        _recordShortCutKey.push("Command");
+                        recordedSet.delete("command");
+                        statusCode |= 1;
+                    }
+                    if (recordedSet.has("option")) {
+                        _recordShortCutKey.push("Option");
+                        recordedSet.delete("option");
+                        statusCode |= 1;
+                    }
+                    if (recordedSet.has("shift")) {
+                        _recordShortCutKey.push("Shift");
+                        recordedSet.delete("shift");
+                        statusCode |= 1;
+                    }
 
-  return (
-    <input
-      data-capture="true"
-      data-disabled={!enabled}
-      readOnly
-      className="short-cut-item--container"
-      ref={inputRef}
-      value={realValue || "空"}
-      onKeyDown={(e) => {
-        e.preventDefault();
-        raf2(() => {
-          resultRef.current = recordShortCutKey.filter(
-            (it) => it !== "Backspace"
-          );
-          isAllModifierKeyRef.current = isAllModifierKey;
-          setRealValue(
-            `${resultRef.current.join(" + ")}${isAllModifierKey ? " +" : ""}`
-          );
-          if (isRecordingRef.current) {
-            return;
-          } else {
-            isRecordingRef.current = true;
-          }
-        });
-      }}
-      onKeyUp={keyupHandler}
-      onBlur={keyupHandler}
-    ></input>
-  );
+                    if (recordedSet.has("alt")) {
+                        _recordShortCutKey.push("Alt");
+                        recordedSet.delete("alt");
+                        statusCode |= 1;
+                    }
+
+                    if (recordedSet.size === 1 && (isGlobal ? statusCode : true)) {
+                        _recordShortCutKey.push(
+                            keyCodeMap([...recordedSet.values()][0]).replace(
+                                /^(.)/,
+                                (_, $1: string) => $1.toUpperCase()
+                            )
+                        );
+                        setTmpValue(_recordShortCutKey);
+                        onChange?.(_recordShortCutKey);
+                    } else {
+                        setTmpValue(null);
+                    }
+
+                    recordedKeysRef.current.clear();
+                }
+            }
+        );
+    }, []);
+
+    return (
+        <div className="short-cut-item--container">
+            <input
+                data-capture="true"
+                data-disabled={!enabled}
+                data-show-clear-button={showClearButton}
+                autoCorrect="off"
+                autoCapitalize="off"
+                type="text"
+                readOnly
+                aria-live="off"
+                className="short-cut-item--input"
+                value={realValue || t("settings.short_cut.no_short_cut")}
+                onKeyDown={(e) => {
+                    e.preventDefault();
+                }}
+                onFocus={() => {
+                    hotkeys.setScope(scopeRef.current);
+                }}
+                onBlur={() => {
+                    hotkeys.setScope("all");
+                    setTmpValue(null);
+                    recordedKeysRef.current.clear();
+                }}
+            >
+            </input>
+            {
+                (enabled && showClearButton) ? <div className='short-cut-item--clear-button' role="button" onClick={onClear}>
+                    <SvgAsset iconName='x-mark'></SvgAsset>
+                </div> : null
+            }
+        </div>
+    );
 }

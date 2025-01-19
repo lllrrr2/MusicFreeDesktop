@@ -3,12 +3,19 @@ import "./index.scss";
 import { useMemo, useState } from "react";
 import groupBy from "@/renderer/utils/groupBy";
 import MusicList from "@/renderer/components/MusicList";
+import { Trans } from "react-i18next";
 
-export default function FolderView() {
-  const localMusicList = localMusicListStore.useValue();
+interface IProps {
+  localMusicList: IMusic.IMusicItem[];
+}
+
+export default function FolderView(props: IProps) {
+  const { localMusicList } = props;
 
   const [keys, allMusic] = useMemo(() => {
-    const grouped = groupBy(localMusicList ?? [], (it) => window.path.dirname(it.$$localPath));
+    const grouped = groupBy(localMusicList ?? [], (it) =>
+      window.path.dirname(it.$$localPath)
+    );
     return [Object.keys(grouped).sort((a, b) => a.localeCompare(b)), grouped];
   }, [localMusicList]);
 
@@ -29,14 +36,21 @@ export default function FolderView() {
             }}
           >
             <span>{it}</span>
-            <span>共{allMusic?.[it]?.length ?? 0}首</span>
+            <span>
+              <Trans
+                i18nKey={"local_music_page.total_music_num"}
+                values={{
+                  number: allMusic?.[it]?.length ?? 0,
+                }}
+              ></Trans>
+            </span>
           </div>
         ))}
       </div>
       <div className="right-part">
         <MusicList
           musicList={allMusic[actualSelectedKey] ?? []}
-          hideRows={['artist']}
+          hideRows={["artist"]}
           virtualProps={{
             fallbackRenderCount: -1,
           }}

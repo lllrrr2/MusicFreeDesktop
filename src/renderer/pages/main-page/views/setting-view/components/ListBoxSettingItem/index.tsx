@@ -1,53 +1,78 @@
-import rendererAppConfig from "@/common/app-config/renderer";
-import {
-  IAppConfigKeyPath,
-  IAppConfigKeyPathValue,
-} from "@/common/app-config/type";
 import { Listbox } from "@headlessui/react";
 import "./index.scss";
-import defaultAppConfig from "@/common/app-config/default-app-config";
-import Condition from "@/renderer/components/Condition";
+import Condition, { IfTruthy } from "@/renderer/components/Condition";
 import Loading from "@/renderer/components/Loading";
 import { isBasicType } from "@/common/normalize-util";
-import useVirtualList from "@/renderer/hooks/useVirtualList";
+import useVirtualList from "@/hooks/useVirtualList";
 import { rem } from "@/common/constant";
-import { Fragment, useEffect, useRef } from "react";
+import {ReactNode, useRef} from "react";
+import SvgAsset from "@/renderer/components/SvgAsset";
+import { Tooltip } from "react-tooltip";
+import {IAppConfig} from "@/types/app-config";
+import useAppConfig from "@/hooks/useAppConfig";
+import AppConfig from "@shared/app-config/renderer";
 
-interface ListBoxSettingItemProps<T extends IAppConfigKeyPath> {
+interface ListBoxSettingItemProps<T extends keyof IAppConfig> {
   keyPath: T;
   label?: string;
-  options: Array<IAppConfigKeyPathValue<T>> | null;
-  value?: IAppConfigKeyPathValue<T>;
-  onChange?: (val: IAppConfigKeyPathValue<T>) => void;
-  renderItem?: (item: IAppConfigKeyPathValue<T>) => string;
+  options: Array<IAppConfig[T]> | null;
+  onChange?: (event: Event, newConfig: IAppConfig[T]) => void;
+  renderItem?: (item: IAppConfig[T]) => ReactNode;
   width?: number | string;
+  toolTip?: string;
 }
 
-export default function ListBoxSettingItem<T extends IAppConfigKeyPath>(
+export default function ListBoxSettingItem<T extends keyof IAppConfig>(
   props: ListBoxSettingItemProps<T>
 ) {
+
   const {
     keyPath,
     label,
     options,
-    value = defaultAppConfig[keyPath],
     onChange,
     renderItem,
     width,
+    toolTip,
   } = props;
+
+  const value = useAppConfig(keyPath);
 
   return (
     <div className="setting-view--list-box-setting-item-container setting-row">
+      <IfTruthy condition={toolTip}>
+        <Tooltip id={`tt-${keyPath}`}></Tooltip>
+      </IfTruthy>
       <Listbox
         value={value}
         onChange={
-          onChange ??
-          ((val) => {
-            rendererAppConfig.setAppConfigPath(keyPath, val);
-          })
+          (newVal) => {
+            const event = new Event("ConfigChanged", {
+              cancelable: true
+            });
+            if (onChange) {
+              onChange(event, newVal);
+            }
+            if (!event.defaultPrevented) {
+              AppConfig.setConfig({
+                [keyPath]: newVal
+              })
+            }
+          }
         }
       >
-        <div className={"label-container"}>{label}</div>
+        <div className={"label-container"}>
+          {label}
+          <IfTruthy condition={toolTip}>
+            <div
+              className="question-mark-container"
+              data-tooltip-id={`tt-${keyPath}`}
+              data-tooltip-content={toolTip}
+            >
+              <SvgAsset iconName="question-mark-circle"></SvgAsset>
+            </div>
+          </IfTruthy>
+        </div>
         <div className="options-container">
           <Listbox.Button
             as="div"
@@ -75,13 +100,13 @@ export default function ListBoxSettingItem<T extends IAppConfigKeyPath>(
   );
 }
 
-interface IListBoxOptionsProps<T extends IAppConfigKeyPath> {
-  options: Array<IAppConfigKeyPathValue<T>> | null;
-  renderItem?: (item: IAppConfigKeyPathValue<T>) => string;
+interface IListBoxOptionsProps<T extends keyof IAppConfig> {
+  options: Array<IAppConfig[T]> | null;
+  renderItem?: (item: IAppConfig[T]) => ReactNode;
   width?: number | string;
 }
 
-function ListBoxOptions<T extends IAppConfigKeyPath>(
+function ListBoxOptions<T extends keyof IAppConfig>(
   props: IListBoxOptionsProps<T>
 ) {
   const { options, renderItem, width } = props;
@@ -89,7 +114,7 @@ function ListBoxOptions<T extends IAppConfigKeyPath>(
 
   const virtualController = useVirtualList({
     data: options ?? [],
-    estimizeItemHeight: 2.2 * rem,
+    estimateItemHeight: 2.2 * rem,
     getScrollElement: () => containerRef.current,
     renderCount: 40,
     fallbackRenderCount: 20,

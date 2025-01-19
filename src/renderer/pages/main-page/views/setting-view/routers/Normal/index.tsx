@@ -1,92 +1,82 @@
-import { IAppConfig } from "@/common/app-config/type";
 import RadioGroupSettingItem from "../../components/RadioGroupSettingItem";
-import "./index.scss";
 import CheckBoxSettingItem from "../../components/CheckBoxSettingItem";
 import MultiRadioGroupSettingItem from "../../components/MultiRadioGroupSettingItem";
+import ListBoxSettingItem from "../../components/ListBoxSettingItem";
 
-interface IProps {
-  data: IAppConfig["normal"];
-}
+import "./index.scss";
+import {changeLang, getLangList} from "@/shared/i18n/renderer";
+import {toast} from "react-toastify";
+import {useTranslation} from "react-i18next";
+import {getGlobalContext} from "@/shared/global-context/renderer";
 
-export default function Normal(props: IProps) {
-  const { data = {} as IAppConfig["normal"] } = props;
 
-  return (
-    <div className="setting-view--normal-container">
-      <CheckBoxSettingItem
-        label="应用启动时检测软件版本更新"
-        checked={data.checkUpdate}
-        keyPath="normal.checkUpdate"
-      ></CheckBoxSettingItem>
-      <RadioGroupSettingItem
-        label="单击退出按钮时"
-        keyPath="normal.closeBehavior"
-        value={data.closeBehavior}
-        options={[
-          {
-            value: "exit",
-            title: "退出应用",
-          },
-          {
-            value: "minimize",
-            title: "最小化到托盘",
-          },
-        ]}
-      ></RadioGroupSettingItem>
-      {window.globalData.platform === "win32" ? (
-        <RadioGroupSettingItem
-          label="任务栏缩略图样式 (重启应用后生效)"
-          keyPath="normal.taskbarThumb"
-          value={data.taskbarThumb}
-          options={[
-            {
-              value: "artwork",
-              title: "当前播放歌曲的封面",
-            },
-            {
-              value: "window",
-              title: "主窗口界面",
-            },
-          ]}
-        ></RadioGroupSettingItem>
-      ) : null}
-      <RadioGroupSettingItem
-        label="搜索历史记录最多保存条数"
-        keyPath="normal.maxHistoryLength"
-        value={data.maxHistoryLength}
-        options={[
-          {
-            value: 15,
-          },
-          {
-            value: 30,
-          },
-          {
-            value: 50,
-          },
-          {
-            value: 100,
-          },
-          {
-            value: 200,
-          },
-        ]}
-      ></RadioGroupSettingItem>
-      <MultiRadioGroupSettingItem
-        label="歌曲列表隐藏列"
-        keyPath="normal.musicListColumnsShown"
-        value={data.musicListColumnsShown}
-        options={[
-          {
-            title: "时长",
-            value: "duration",
-          },
-          {
-            title: "来源",
-            value: "platform",
-          },
-        ]}
-      ></MultiRadioGroupSettingItem>
-    </div>
-  );
+export default function Normal() {
+    const {t} = useTranslation();
+
+    const allLangs = getLangList();
+
+    return (
+        <div className="setting-view--normal-container">
+            <CheckBoxSettingItem
+                label={t("settings.normal.check_update")}
+                keyPath="normal.checkUpdate"
+            ></CheckBoxSettingItem>
+            <RadioGroupSettingItem
+                label={t("settings.normal.close_behavior")}
+                keyPath="normal.closeBehavior"
+                options={[
+                    "exit_app",
+                    "minimize"
+                ]}
+                renderItem={(item) => t("settings.normal." + item)}
+            ></RadioGroupSettingItem>
+            {getGlobalContext().platform === "win32" ? (
+                <RadioGroupSettingItem
+                    label={t("settings.normal.taskbar_thumb")}
+                    keyPath="normal.taskbarThumb"
+                    options={[
+                        "artwork",
+                        "window"
+                    ]}
+                    renderItem={item => {
+                        if (item === "artwork") {
+                            return t("settings.normal.current_artwork");
+                        } else {
+                            return t("settings.normal.main_window")
+                        }
+                    }}
+
+                ></RadioGroupSettingItem>
+            ) : null}
+            <RadioGroupSettingItem
+                label={t("settings.normal.max_history_length")}
+                keyPath="normal.maxHistoryLength"
+                options={[15, 30, 50, 100, 200]}
+            ></RadioGroupSettingItem>
+            <MultiRadioGroupSettingItem
+                label={t("settings.normal.music_list_hide_columns")}
+                keyPath="normal.musicListColumnsShown"
+                options={[
+                    "duration",
+                    "platform"
+                ]}
+                renderItem={(item) => {
+                    return t("media.media_" + item);
+                }}
+            ></MultiRadioGroupSettingItem>
+            <ListBoxSettingItem
+                label={t("settings.normal.languages")}
+                keyPath="normal.language"
+                width={"240px"}
+                onChange={async (evt, lang) => {
+                    evt.preventDefault();
+                    const success = await changeLang(lang);
+                    if (!success) {
+                        toast.warning(t("settings.normal.toast_switch_language_fail"));
+                    }
+                }}
+                options={allLangs}
+            ></ListBoxSettingItem>
+        </div>
+    );
 }

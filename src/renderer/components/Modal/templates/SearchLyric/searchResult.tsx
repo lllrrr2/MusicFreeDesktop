@@ -8,12 +8,11 @@ import { setFallbackAlbum } from "@/renderer/utils/img-on-error";
 import Empty from "@/renderer/components/Empty";
 import "./searchResult.scss";
 import { linkLyric } from "@/renderer/core/link-lyric";
-import { getMediaPrimaryKey, isSameMedia } from "@/common/media-util";
-import { getCurrentMusic } from "@/renderer/core/track-player/player";
-import trackPlayerEventsEmitter from "@/renderer/core/track-player/event";
-import { TrackPlayerEvent } from "@/renderer/core/track-player/enum";
+import { getMediaPrimaryKey } from "@/common/media-util";
 import { toast } from "react-toastify";
 import { hideModal } from "../..";
+import { useTranslation } from "react-i18next";
+import trackPlayer from "@renderer/core/track-player";
 
 interface ISearchResultProps {
   data: ISearchLyricResult;
@@ -22,6 +21,8 @@ interface ISearchResultProps {
 
 function SearchResult(props: ISearchResultProps) {
   const { data, musicItem } = props;
+
+  const {t} = useTranslation();
 
   return (
     <div className="search-result-container">
@@ -47,16 +48,13 @@ function SearchResult(props: ISearchResultProps) {
                         if (musicItem) {
                           try {
                             await linkLyric(musicItem, it);
-                            if (isSameMedia(getCurrentMusic(), musicItem)) {
-                              trackPlayerEventsEmitter.emit(
-                                TrackPlayerEvent.NeedRefreshLyric,
-                                true
-                              );
+                            if (trackPlayer.isCurrentMusic(musicItem)) {
+                              trackPlayer.fetchCurrentLyric(true);
                             }
-                            toast.success("已关联歌词~");
+                            toast.success(t("modal.media_lyric_linked"));
                             hideModal();
                           } catch (e) {
-                            toast.error(`关联歌词失败: ${e?.message ?? e}`);
+                            toast.error(`${t("modal.media_lyric_link_failed")} ${e?.message ?? e}`);
                           }
                         }
                       }}

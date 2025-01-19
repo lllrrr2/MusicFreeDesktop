@@ -1,4 +1,4 @@
-import { produce } from "immer";
+import { produce, setAutoFreeze } from "immer";
 import {
   internalDataKey,
   localPluginName,
@@ -6,6 +6,7 @@ import {
   sortIndexSymbol,
   timeStampSymbol,
 } from "./constant";
+setAutoFreeze(false);
 
 export function isSameMedia(
   a?: IMedia.IMediaBase | null,
@@ -39,10 +40,10 @@ export function resetMediaItem<T extends IMedia.IMediaBase>(
 }
 
 export function getMediaPrimaryKey(mediaItem: IMedia.IUnique) {
-  if(mediaItem) {
+  if (mediaItem) {
     return `${mediaItem.platform}@${mediaItem.id}`;
   }
-  return 'invalid@invalid'
+  return "invalid@invalid";
 }
 
 export function sortByTimestampAndIndex(array: any[], newArray = false) {
@@ -64,13 +65,48 @@ export function addSortProperty(
   const now = Date.now();
   if (Array.isArray(mediaItems)) {
     mediaItems.forEach((item, index) => {
+      if (!item) {
+        return;
+      }
       item[timeStampSymbol] = now;
       item[sortIndexSymbol] = index;
     });
   } else {
+    if (!mediaItems) {
+      return;
+    }
     mediaItems[timeStampSymbol] = now;
     mediaItems[sortIndexSymbol] = 0;
   }
+}
+
+export function flatMediaItem<T extends IMedia.IMediaBase>(mediaItem: T) {
+  if (!mediaItem) {
+    return mediaItem;
+  }
+
+  return {
+    ...mediaItem,
+    ...(mediaItem?.$raw || {}),
+    platform: mediaItem.platform || mediaItem?.$raw?.platform,
+    id: mediaItem.id || mediaItem?.$raw?.id,
+  } as T;
+}
+
+export function removeInternalProperties<T extends IMedia.IMediaBase>(
+  mediaItem: T
+) {
+  if (!mediaItem) {
+    return mediaItem;
+  }
+
+  const keys = Object.keys(mediaItem);
+  return keys.reduce((obj, key) => {
+    if (!key.startsWith("$")) {
+      obj[key] = mediaItem[key];
+    }
+    return obj;
+  }, {} as any) as T;
 }
 
 /**
@@ -81,8 +117,12 @@ export function addSortProperty(
  */
 export function getQualityOrder(
   qualityKey: IMusic.IQualityKey,
-  sort: "higher" | "lower"
+  sort: "higher" | "lower" | "skip"
 ) {
+  if (sort === "skip") {
+    return [qualityKey];
+  }
+
   const idx = qualityKeys.indexOf(qualityKey);
   const left = qualityKeys.slice(0, idx);
   const right = qualityKeys.slice(idx + 1);
@@ -110,12 +150,7 @@ export function setInternalData<
   T extends Record<string, any>,
   K extends keyof T = keyof T,
   R extends IMedia.IMediaBase = IMedia.IMediaBase
->(
-  mediaItem: R,
-  internalProp: K,
-  value: T[K] | null,
-  newObj = false
-): R {
+>(mediaItem: R, internalProp: K, value: T[K] | null, newObj = false): R {
   if (newObj) {
     return {
       ...mediaItem,
@@ -131,3 +166,9 @@ export function setInternalData<
   return mediaItem;
 }
 
+export function toMediaBase(media: IMedia.IMediaBase) {
+  return {
+    platform: media.platform,
+    id: media.id,
+  };
+}

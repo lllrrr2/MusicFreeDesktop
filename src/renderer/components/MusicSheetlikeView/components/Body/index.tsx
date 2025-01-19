@@ -1,28 +1,23 @@
 import MusicList from "@/renderer/components/MusicList";
 import "./index.scss";
 import SvgAsset from "@/renderer/components/SvgAsset";
-import {
-  MutableRefObject,
-  ReactNode,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { ReactNode, useEffect, useState, useTransition } from "react";
 import Condition from "@/renderer/components/Condition";
 import Loading from "@/renderer/components/Loading";
-import trackPlayer from "@/renderer/core/track-player";
+import trackPlayer from "@renderer/core/track-player";
 import { showModal } from "@/renderer/components/Modal";
-import { RequestStateCode, rem } from "@/common/constant";
+import { RequestStateCode, localPluginName } from "@/common/constant";
 import { offsetHeightStore } from "../../store";
-import rendererAppConfig from "@/common/app-config/renderer";
+import MusicSheet from "@/renderer/core/music-sheet";
+import AppConfig from "@shared/app-config/renderer";
+import { useTranslation } from "react-i18next";
 
 interface IProps {
   musicSheet: IMusic.IMusicSheetItem;
   musicList: IMusic.IMusicItem[];
   state?: RequestStateCode;
   onLoadMore?: () => void;
-  options?: ReactNode
+  options?: ReactNode;
 }
 export default function Body(props: IProps) {
   const { musicList = [], musicSheet, state, onLoadMore, options } = props;
@@ -32,13 +27,14 @@ export default function Body(props: IProps) {
     IMusic.IMusicItem[] | null
   >(null);
   const [isPending, startTransition] = useTransition();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (inputSearch.trim() === "") {
       setFilterMusicList(null);
     } else {
       startTransition(() => {
-        const caseSensitive = rendererAppConfig.getAppConfigPath(
+        const caseSensitive = AppConfig.getConfig(
           "playMusic.caseSensitiveInSearch"
         );
         if (caseSensitive) {
@@ -75,30 +71,33 @@ export default function Body(props: IProps) {
         <div className="buttons">
           <div
             role="button"
+            className="option-button"
             data-disabled={!musicList?.length}
             data-type="primaryButton"
-            title="播放全部"
+            title={t("music_sheet_like_view.play_all")}
             onClick={() => {
               if (musicList.length) {
                 trackPlayer.playMusicWithReplaceQueue(musicList);
               }
             }}
           >
-            播放全部
+            <SvgAsset iconName="play"></SvgAsset>
+            <span>{t("music_sheet_like_view.play_all")}</span>
           </div>
           <div
             role="button"
             data-type="normalButton"
             data-disabled={!musicList?.length}
-            className="add-to-sheet"
-            title="添加到歌单"
+            className="add-to-sheet option-button"
+            title={t("music_sheet_like_view.add_to_sheet")}
             onClick={() => {
               showModal("AddMusicToSheet", {
                 musicItems: musicList,
               });
             }}
           >
-            添加到歌单
+            <SvgAsset iconName="plus"></SvgAsset>
+            <span>{t("music_sheet_like_view.add_to_sheet")}</span>
           </div>
           {options}
         </div>
@@ -111,7 +110,7 @@ export default function Body(props: IProps) {
             value={inputSearch}
             className="search-in-music-list"
           ></input>
-          <SvgAsset iconName="magnifying-glass" size={16}></SvgAsset>
+          <SvgAsset iconName="magnifying-glass"></SvgAsset>
         </div>
       </div>
       <Condition
@@ -123,7 +122,7 @@ export default function Body(props: IProps) {
       >
         <MusicList
           musicList={filterMusicList ?? musicList}
-          getAllMusicItems={() => musicList}
+          // getAllMusicItems={() => musicList} // TODO: 过滤歌曲
           musicSheet={musicSheet}
           state={state}
           onPageChange={onLoadMore}
@@ -132,6 +131,12 @@ export default function Body(props: IProps) {
               return document.querySelector("#page-container");
             },
             offsetHeight: () => offsetHeightStore.getValue(),
+          }}
+          enableDrag={musicSheet?.platform === localPluginName}
+          onDragEnd={(newData) => {
+            if (musicSheet?.platform === localPluginName && musicSheet?.id) {
+              MusicSheet.frontend.updateSheetMusicOrder(musicSheet.id, newData);
+            }
           }}
         ></MusicList>
       </Condition>

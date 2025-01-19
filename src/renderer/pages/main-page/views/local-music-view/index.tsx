@@ -1,18 +1,16 @@
 import localMusicListStore from "@/renderer/core/local-music/store";
-import { Tab } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
 
 import "./index.scss";
-import MusicList from "@/renderer/components/MusicList";
 import { showModal } from "@/renderer/components/Modal";
 import SvgAsset from "@/renderer/components/SvgAsset";
-import { useUserPerference } from "@/renderer/utils/user-perference";
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import SwitchCase from "@/renderer/components/SwitchCase";
 import ListView from "./views/list";
 import ArtistView from "./views/artist";
 import AlbumView from "./views/album";
 import FolderView from "./views/folder";
+import AppConfig from "@shared/app-config/renderer";
 
 enum DisplayView {
   LIST,
@@ -25,9 +23,59 @@ export default function LocalMusicView() {
   const { t } = useTranslation();
   const [displayView, setDisplayView] = useState(DisplayView.LIST);
 
+  const localMusicList = localMusicListStore.useValue();
+  const [inputSearch, setInputSearch] = useState("");
+  const [filterMusicList, setFilterMusicList] = useState<
+    IMusic.IMusicItem[] | null
+  >(null);
+
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (inputSearch.trim() === "") {
+      setFilterMusicList(null);
+    } else {
+      startTransition(() => {
+        const caseSensitive = AppConfig.getConfig(
+          "playMusic.caseSensitiveInSearch"
+        );
+        if (caseSensitive) {
+          setFilterMusicList(
+            localMusicListStore
+              .getValue()
+              .filter(
+                (item) =>
+                  item.title?.includes(inputSearch) ||
+                  item.artist?.includes(inputSearch) ||
+                  item.album?.includes(inputSearch)
+              )
+          );
+        } else {
+          const searchText = inputSearch.toLocaleLowerCase();
+          setFilterMusicList(
+            localMusicListStore
+              .getValue()
+              .filter(
+                (item) =>
+                  item.title?.toLocaleLowerCase()?.includes(searchText) ||
+                  item.artist?.toLocaleLowerCase()?.includes(searchText) ||
+                  item.album?.toLocaleLowerCase()?.includes(searchText)
+              )
+          );
+        }
+      });
+    }
+  }, [inputSearch]);
+
+  const finalMusicList = filterMusicList ?? localMusicList;
+
   return (
-    <div className="local-music-view--container" data-full-page={displayView !== DisplayView.LIST}>
-      <div className="header">本地音乐</div>
+    <div
+      id="page-container"
+      className="page-container local-music-view--container"
+      data-full-page={displayView !== DisplayView.LIST}
+    >
+      <div className="header">{t("local_music_page.local_music")}</div>
       <div className="operations">
         <div
           data-type="normalButton"
@@ -36,13 +84,21 @@ export default function LocalMusicView() {
             showModal("WatchLocalDir");
           }}
         >
-          自动扫描
+          {t("local_music_page.auto_scan")}
         </div>
         <div className="operations-layout">
+          <input
+            className="search-local-music"
+            spellCheck={false}
+            onChange={(evt) => {
+              setInputSearch(evt.target.value);
+            }}
+            placeholder={t("local_music_page.search_local_music")}
+          ></input>
           <div
             className="list-view-action"
             data-selected={displayView === DisplayView.LIST}
-            title="列表视图"
+            title={t("local_music_page.list_view")}
             onClick={() => {
               setDisplayView(DisplayView.LIST);
             }}
@@ -52,7 +108,7 @@ export default function LocalMusicView() {
           <div
             className="list-view-action"
             data-selected={displayView === DisplayView.ARTIST}
-            title="作者视图"
+            title={t("local_music_page.artist_view")}
             onClick={() => {
               setDisplayView(DisplayView.ARTIST);
             }}
@@ -62,7 +118,7 @@ export default function LocalMusicView() {
           <div
             className="list-view-action"
             data-selected={displayView === DisplayView.ALBUM}
-            title="专辑视图"
+            title={t("local_music_page.album_view")}
             onClick={() => {
               setDisplayView(DisplayView.ALBUM);
             }}
@@ -72,7 +128,7 @@ export default function LocalMusicView() {
           <div
             className="list-view-action"
             data-selected={displayView === DisplayView.FOLDER}
-            title="文件夹视图"
+            title={t("local_music_page.folder_view")}
             onClick={() => {
               setDisplayView(DisplayView.FOLDER);
             }}
@@ -83,16 +139,16 @@ export default function LocalMusicView() {
       </div>
       <SwitchCase.Switch switch={displayView}>
         <SwitchCase.Case case={DisplayView.LIST}>
-          <ListView></ListView>
+          <ListView localMusicList={finalMusicList}></ListView>
         </SwitchCase.Case>
         <SwitchCase.Case case={DisplayView.ARTIST}>
-          <ArtistView></ArtistView>
+          <ArtistView localMusicList={finalMusicList}></ArtistView>
         </SwitchCase.Case>
         <SwitchCase.Case case={DisplayView.ALBUM}>
-          <AlbumView></AlbumView>
+          <AlbumView localMusicList={finalMusicList}></AlbumView>
         </SwitchCase.Case>
         <SwitchCase.Case case={DisplayView.FOLDER}>
-          <FolderView></FolderView>
+          <FolderView localMusicList={finalMusicList}></FolderView>
         </SwitchCase.Case>
       </SwitchCase.Switch>
     </div>
